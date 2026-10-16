@@ -106,6 +106,14 @@ CI runs real contracts against PostgreSQL, MySQL, MariaDB and a MongoDB replica 
 - Logout revokes refresh families; existing access JWTs may last until their short expiry. Security-sensitive account changes and refresh reuse revoke access through auth-version.
 - Encrypted backups still contain sensitive data. Plan retention, key recovery, restore rehearsals and filesystem quotas. TOTP has no unauthenticated recovery bypass.
 
+## Development guides
+
+- [Contributing and module ownership](CONTRIBUTING.md)
+- [Windows and PowerShell setup](docs/WINDOWS.md)
+- [Test selection and external database contracts](docs/TESTING.md)
+- [Readiness, maintenance and deployment changes](docs/OPERATIONS.md)
+- [Connecting the RAG service](docs/RAG_INTEGRATION.md)
+
 ## License
 
 Released under [CC0 1.0](LICENSE), matching the Spring Boot sibling.
