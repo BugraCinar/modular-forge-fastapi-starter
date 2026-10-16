@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     r2_public_url: str = ""
     database_backup_encryption_key: str = Field(default="", repr=False)
     database_backup_directory: str = "backups"
+    database_backup_client_config: str = ""
     database_backup_max_bytes: int = Field(default=67108864, ge=1024)
     sentry_dsn: str = Field(default="", repr=False)
     kafka_bootstrap_servers: str = ""
@@ -119,6 +120,13 @@ class Settings(BaseSettings):
         if self.module_database_backup_enabled:
             if secret_bytes(self.database_backup_encryption_key) in keys:
                 raise ValueError("Use an independent backup encryption key.")
+            if (
+                self.database_url.startswith(("mysql", "mariadb"))
+                and not self.database_backup_client_config
+            ):
+                raise ValueError(
+                    "MySQL/MariaDB backups require a provisioned DATABASE_BACKUP_CLIENT_CONFIG."
+                )
         if self.module_image_storage_enabled:
             if not all(
                 [

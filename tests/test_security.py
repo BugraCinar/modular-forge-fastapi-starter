@@ -23,6 +23,20 @@ def test_invalid_secrets_and_wildcard_cors_rejected(settings):
     assert settings.jwt_secret not in repr(settings) and settings.database_url not in repr(settings)
 
 
+def test_password_hashes_require_the_original_pepper(settings):
+    from conftest import PASSWORD
+
+    first = Security(settings)
+    encoded = first.hash_password(PASSWORD)
+    changed = Settings(
+        _env_file=None, **{**settings.model_dump(), "pepper": base64.b64encode(b"z" * 32).decode()}
+    )
+    assert first.verify_password(PASSWORD, encoded)
+    assert not Security(changed).verify_password(PASSWORD, encoded)
+    assert not first.verify_password(PASSWORD + "wrong", encoded)
+    assert encoded.startswith("$argon2id$")
+
+
 @pytest.mark.parametrize(
     "unsafe",
     [

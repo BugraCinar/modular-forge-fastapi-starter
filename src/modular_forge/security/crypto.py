@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import hmac
 import secrets
@@ -29,7 +28,8 @@ class Security:
         self.dummy_hash = self.hash_password(secrets.token_urlsafe(32))
 
     def _peppered(self, password: str):
-        return base64.b64encode(hmac.digest(self.pepper, password.encode(), "sha256")).decode()
+        # Argon2 accepts bytes, including NUL; the fixed-size pepper stays outside the database.
+        return password.encode("utf-8") + b"\x00" + self.pepper
 
     def hash_password(self, password: str):
         if len(password) < self.settings.password_min_length or len(password) > 1024:

@@ -22,6 +22,17 @@ class BackupService:
         self.key = secret_bytes(runtime.settings.database_backup_encryption_key)
         self.directory = Path(runtime.settings.database_backup_directory).resolve()
         self.directory.mkdir(parents=True, exist_ok=True)
+        self.client_config = None
+        if runtime.settings.database_url.startswith(("mysql", "mariadb")):
+            self.client_config = Path(runtime.settings.database_backup_client_config).resolve(
+                strict=True
+            )
+            if not self.client_config.is_file() or (
+                os.name == "posix" and self.client_config.stat().st_mode & 0o077
+            ):
+                raise ValueError(
+                    "The backup client configuration must be a private, owner-only file."
+                )
 
     def encrypt(self, content):
         nonce = os.urandom(12)
@@ -57,31 +68,10 @@ class BackupService:
                 environment["PGSSLROOTCERT"] = str(url.query["sslrootcert"])
             command = ["pg_dump", "--format=custom", "--no-owner"]
         elif url.drivername.startswith(("mysql", "mariadb")):
-
-            def quoted(value):
-                if any(c in str(value) for c in "\r\n\x00"):
-                    raise ValueError("Invalid database option")
-                return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-            config = Path(temporary) / "client.cnf"
-            values = {
-                "host": url.host or "localhost",
-                "port": url.port or 3306,
-                "user": url.username or "",
-                "password": url.password or "",
-            }
-            if url.query.get("ssl_ca"):
-                values["ssl-ca"] = url.query["ssl_ca"]
-                values["ssl-verify-server-cert"] = "true"
-            config.write_text(
-                "[client]\n" + "\n".join(f"{key}={quoted(value)}" for key, value in values.items()),
-                encoding="utf-8",
-            )
-            config.chmod(0o600)
             binary = "mariadb-dump" if url.drivername.startswith("mariadb") else "mysqldump"
             command = [
                 binary,
-                f"--defaults-extra-file={config}",
+                f"--defaults-extra-file={self.client_config}",
                 "--single-transaction",
                 "--skip-lock-tables",
                 "--",
