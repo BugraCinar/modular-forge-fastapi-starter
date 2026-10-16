@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a focused feature or replaceable adapter.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case
+      description: Describe the user or developer workflow this would improve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Give a concrete input/output or before/after example.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Module and port
+      description: Identify the owning module, shared contract and whether the feature should be optional.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and removal
+      description: Note API, environment, schema and dependency changes, and how consumers could disable or remove the feature.
