@@ -1,0 +1,25 @@
+# Security model and deployment
+
+Generate independent 32-byte Base64 secrets for JWT signing, keyed token hashes and the application password pepper. The CLI generates separate TOTP and backup keys as well. There are no usable secret defaults. Keep keys in a secrets manager in production. Changing the pepper requires a password migration/reset strategy; changing JWT or token-hash keys invalidates credentials. TOTP/backup key rotation requires decrypting with the previous key and re-encrypting stored data.
+
+Passwords use Argon2id after HMAC peppering. Production enforces at least 64 MiB memory and three iterations. Account/IP rate limits and persistent account lockout limit guessing. The application ignores client-supplied forwarding headers; the default server command uses `--no-proxy-headers`. If a trusted edge is introduced, restrict access to it and configure a verified client-IP integration before treating forwarded addresses as authoritative.
+
+Browser clients opt into cookies with `use_cookie: true` on login. Secure deployments use `__Host-forge_refresh` (HttpOnly) and a signed `__Host-forge_csrf` double-submit value, both host-only, Path=/, SameSite=Lax. Echo the CSRF value in `X-XSRF-TOKEN` for cookie-authorized refresh/logout. A supplied cookie always takes authority and triggers CSRF checks; a body token cannot bypass them. CORS uses explicit origins. Local HTTP changes COOKIE_SECURE only in development. Cross-site cookie deployments need a separately reviewed SameSite/CSRF policy.
+
+Body-token clients keep refresh tokens in secure platform storage. Logout/session deletion revokes the refresh-token family; a previously issued access JWT can remain usable until its short expiry. Password/email/role changes, account deactivation, lockout, TOTP changes and detected refresh reuse increment auth-version and revoke access immediately on the next account-state check. Clients must serialize refresh requests to avoid triggering replay defenses through parallel rotation.
+
+JWTs are decoded with a fixed HS256 allowlist, required issuer/audience/expiry and explicit token type. Authorization uses the current database role and account state. ADMIN may manage only USER accounts; SUPER_ADMIN may manage other administrators. Self-demotion/deactivation through the admin API is denied. Sensitive writes also require the current administrator password; TOTP is opt-in and should be enabled for privileged accounts.
+
+Email verification/reset/change tokens are CSPRNG values; only keyed hashes and expiry/context records are persisted. Registration/reset responses are generic under normal operation. An unavailable notification provider prevents functioning email workflows; configure it before deployment. Delivery callbacks run after commit, and SMTP is not a durable queue. Use a transactional outbox for guaranteed delivery and uniform outage handling.
+
+TOTP secrets and backups use AES-256-GCM with independent keys. TOTP encryption binds the account id as authenticated data; accepted time steps and one-use, attempt-limited challenges prevent replay. Re-enabling the same module key is required to use existing credentials. Disabling the adapter with enrolled accounts is refused. No unauthenticated 2FA recovery shortcut is supplied.
+
+Uploads are size/pixel limited, validated by Pillow and re-encoded to WebP without source metadata. User filenames/content-type declarations are not trusted. Object deletion is scoped to the authenticated owner's generated key. Keep the R2 bucket upload credentials private and use a dedicated public read domain.
+
+Backups are sensitive even when encrypted. Only reauthenticated SUPER_ADMINs can create/download them. Dump tools run without a shell; credentials are supplied through environment variables or restricted temporary config files, not command arguments. Temporary plaintext exists during backup and is deleted afterward; deploy on a protected encrypted filesystem with an appropriate size/quota policy. External utility versions and the base image need their own security updates.
+
+API responses send restrictive CSP/frame/nosniff/referrer headers and no-store. Production enables HSTS and forbids public OpenAPI, seed accounts, SQLite, schema auto-create, insecure cookies, fail-open/memory rate limiting and unverified database/Redis transport. Development docs use a separately scoped CDN/inline CSP and must remain disabled in production.
+
+Public readiness returns only up/down, checks database and authoritative rate-limit storage, and omits connection details. Exception and validation responses do not echo submitted secrets. Sentry removes request/user/breadcrumb data and exception messages; additional application-specific telemetry must be reviewed for PII.
+
+This starter is not a certification or a substitute for deployment-specific review. Keep dependency audits, backups, least-privilege credentials, trusted-edge TLS and incident monitoring in place.

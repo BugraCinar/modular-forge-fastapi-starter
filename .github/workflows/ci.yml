@@ -1,0 +1,127 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.1"
+          enable-cache: true
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen --all-extras ruff check .
+      - run: uv run --frozen --all-extras ruff format --check .
+      - run: uv run --frozen --all-extras mypy src/modular_forge
+      - run: uv run --frozen --all-extras pytest --cov=modular_forge --cov-report=term-missing
+
+  database-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: contract-only-password
+          POSTGRES_DB: forge_contract
+        ports: ["15432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U forge -d forge_contract"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: contract-root-password
+          MYSQL_USER: forge
+          MYSQL_PASSWORD: contract-only-password
+          MYSQL_DATABASE: forge_contract
+        ports: ["13306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: contract-root-password
+          MARIADB_USER: forge
+          MARIADB_PASSWORD: contract-only-password
+          MARIADB_DATABASE: forge_contract
+        ports: ["13307:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.1"
+      - run: uv sync --frozen --all-extras
+      - name: PostgreSQL contracts
+        run: uv run --frozen --all-extras pytest tests/test_persistence.py -q
+        env:
+          CONTRACT_DATABASE_URL: postgresql+psycopg://forge:contract-only-password@localhost:15432/forge_contract
+      - name: MySQL contracts
+        run: uv run --frozen --all-extras pytest tests/test_persistence.py -q
+        env:
+          CONTRACT_DATABASE_URL: mysql+pymysql://forge:contract-only-password@localhost:13306/forge_contract
+      - name: MariaDB contracts
+        run: uv run --frozen --all-extras pytest tests/test_persistence.py -q
+        env:
+          CONTRACT_DATABASE_URL: mariadb+pymysql://forge:contract-only-password@localhost:13307/forge_contract
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d --name contract-mongo -p 27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 30); do
+            if docker exec contract-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})'; then break; fi
+            sleep 2
+          done
+          docker exec contract-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for attempt in $(seq 1 30); do
+            if docker exec contract-mongo mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)'; then break; fi
+            sleep 2
+          done
+      - name: MongoDB contracts
+        run: uv run --frozen --all-extras pytest tests/test_persistence.py -q
+        env:
+          CONTRACT_DATABASE_URL: mongodb://localhost:27017/forge_contract?replicaSet=rs0
+
+  package-and-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.1"
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen --all-extras python -m build
+      - name: Install wheel outside checkout and smoke test
+        run: |
+          uv venv "$RUNNER_TEMP/package-check" --python 3.13
+          uv pip install --python "$RUNNER_TEMP/package-check/bin/python" dist/*.whl
+          mkdir "$RUNNER_TEMP/package-smoke"
+          cd "$RUNNER_TEMP/package-smoke"
+          "$RUNNER_TEMP/package-check/bin/python" -m modular_forge init-env
+          "$RUNNER_TEMP/package-check/bin/python" -m modular_forge migrate
+          "$RUNNER_TEMP/package-check/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed.py"
+      - run: docker build -t modular-forge-fastapi:ci .

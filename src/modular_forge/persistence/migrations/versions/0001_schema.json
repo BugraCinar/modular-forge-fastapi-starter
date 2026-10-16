@@ -1,0 +1,324 @@
+[
+  {
+    "name": "accounts",
+    "columns": [
+      {
+        "name": "email",
+        "kind": "str",
+        "length": 254,
+        "nullable": false
+      },
+      {
+        "name": "username",
+        "kind": "str",
+        "length": 64,
+        "nullable": false
+      },
+      {
+        "name": "password_hash",
+        "kind": "text",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "role",
+        "kind": "str",
+        "length": 20,
+        "nullable": false
+      },
+      {
+        "name": "active",
+        "kind": "bool",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "verified",
+        "kind": "bool",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "auth_version",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "failed_logins",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "locked_until",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "deactivated_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": true
+      }
+    ],
+    "unique": [
+      [
+        "email"
+      ],
+      [
+        "username"
+      ]
+    ],
+    "indexes": [
+      [
+        "role"
+      ]
+    ]
+  },
+  {
+    "name": "auth_tokens",
+    "columns": [
+      {
+        "name": "account_id",
+        "kind": "str",
+        "length": 64,
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "kind": "str",
+        "length": 24,
+        "nullable": false
+      },
+      {
+        "name": "family",
+        "kind": "str",
+        "length": 64,
+        "nullable": false
+      },
+      {
+        "name": "used",
+        "kind": "bool",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "expires_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "auth_version",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "context",
+        "kind": "json",
+        "length": 255,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "indexes": [
+      [
+        "account_id",
+        "kind"
+      ],
+      [
+        "family"
+      ],
+      [
+        "expires_at"
+      ]
+    ]
+  },
+  {
+    "name": "profiles",
+    "columns": [
+      {
+        "name": "display_name",
+        "kind": "str",
+        "length": 120,
+        "nullable": false
+      },
+      {
+        "name": "biography",
+        "kind": "text",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "image_key",
+        "kind": "str",
+        "length": 160,
+        "nullable": true
+      },
+      {
+        "name": "image_url",
+        "kind": "text",
+        "length": 255,
+        "nullable": true
+      }
+    ],
+    "unique": [],
+    "indexes": []
+  },
+  {
+    "name": "audit_events",
+    "columns": [
+      {
+        "name": "event",
+        "kind": "str",
+        "length": 80,
+        "nullable": false
+      },
+      {
+        "name": "actor_id",
+        "kind": "str",
+        "length": 64,
+        "nullable": true
+      },
+      {
+        "name": "target_id",
+        "kind": "str",
+        "length": 64,
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "indexes": [
+      [
+        "created_at"
+      ],
+      [
+        "actor_id"
+      ]
+    ]
+  },
+  {
+    "name": "two_factor_credentials",
+    "columns": [
+      {
+        "name": "encrypted_secret",
+        "kind": "text",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "kind": "bool",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "pending_until",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "last_step",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "indexes": []
+  },
+  {
+    "name": "two_factor_challenges",
+    "columns": [
+      {
+        "name": "account_id",
+        "kind": "str",
+        "length": 64,
+        "nullable": false
+      },
+      {
+        "name": "auth_version",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "attempts",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "used",
+        "kind": "bool",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "expires_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "indexes": [
+      [
+        "expires_at"
+      ]
+    ]
+  },
+  {
+    "name": "backup_jobs",
+    "columns": [
+      {
+        "name": "file_name",
+        "kind": "str",
+        "length": 80,
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "kind": "str",
+        "length": 64,
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "kind": "int",
+        "length": 255,
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "kind": "str",
+        "length": 16,
+        "nullable": false
+      }
+    ],
+    "unique": [],
+    "indexes": []
+  }
+]
