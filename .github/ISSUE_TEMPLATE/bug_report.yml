@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible problem in a module or database adapter.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: Use synthetic data. Omit credentials, tokens, .env files and database URLs. Report security vulnerabilities privately.
+  - type: input
+    id: revision
+    attributes:
+      label: Version or commit
+      placeholder: v1.0.0 or the output of git rev-parse HEAD
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Runtime, database and module
+      placeholder: Python 3.14, PostgreSQL, authentication
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the relevant module toggles using synthetic values and the steps that trigger the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Request ID, error code and relevant test output; remove personal data and secrets.
